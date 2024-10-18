@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !arm64
-
 package main
 
 import (
@@ -37,8 +35,12 @@ import (
 var (
 	webConfig  = webflag.AddFlags(kingpin.CommandLine, ":9953")
 	metricPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").Envar("IBM_DB2_EXPORTER_WEB_TELEMETRY_PATH").String()
-	dsn        = kingpin.Flag("dsn", "The connection string (data source name) to use to connect to the database when querying metrics.").Envar("IBM_DB2_EXPORTER_DSN").Required().String()
-	db         = kingpin.Flag("db", "The database to connect to when querying metrics.").Envar("IBM_DB2_EXPORTER_DB").Required().String()
+	dsn        = kingpin.Flag("dsn", "The connection string (data source name) to use to connect to the database when querying metrics.").Envar("IBM_DB2_EXPORTER_DSN").String()
+	host       = kingpin.Flag("host", "The database host ip address.").Envar("DATABASE_HOSTNAME").String()
+	port       = kingpin.Flag("port", "The database port number.").Envar("DATABASE_PORT").String()
+	user       = kingpin.Flag("user", "The database user.").Envar("DATABASE_USER").String()
+	password   = kingpin.Flag("password", "The database password.").Envar("DATABASE_PASSWORD").String()
+	db         = kingpin.Flag("db", "The database to connect to when querying metrics.").Envar("DATABASE_NAME").Required().String()
 )
 
 const (
@@ -64,6 +66,11 @@ func main() {
 	kingpin.Parse()
 
 	logger := promlog.New(promlogConfig)
+
+	// 组合DSN字符串
+	if *dsn == "" {
+		*dsn = fmt.Sprintf("DATABASE=%s;HOSTNAME=%s;PORT=%s;UID=%s;PWD=%s;", *db, *host, *port, *user, *password)
+	}
 
 	// Construct the collector, using the flags for configuration
 	c := &collector.Config{
