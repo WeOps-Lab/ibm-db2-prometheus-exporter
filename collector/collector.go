@@ -50,19 +50,20 @@ type Collector struct {
 	mu       sync.Mutex
 	pingFail bool
 
-	applicationActive    *prometheus.Desc
-	applicationExecuting *prometheus.Desc
-	connectionsTop       *prometheus.Desc
-	deadlockCount        *prometheus.Desc
-	lockUsage            *prometheus.Desc
-	lockWaitTime         *prometheus.Desc
-	lockTimeoutCount     *prometheus.Desc
-	bufferpoolHitRatio   *prometheus.Desc
-	rowCount             *prometheus.Desc
-	tablespaceUsage      *prometheus.Desc
-	logUsage             *prometheus.Desc
-	logOperations        *prometheus.Desc
-	dbUp                 *prometheus.Desc
+	applicationActive     *prometheus.Desc
+	applicationExecuting  *prometheus.Desc
+	connectionsTop        *prometheus.Desc
+	deadlockCount         *prometheus.Desc
+	lockUsage             *prometheus.Desc
+	lockWaitTime          *prometheus.Desc
+	lockTimeoutCount      *prometheus.Desc
+	bufferpoolHitRatio    *prometheus.Desc
+	rowCount              *prometheus.Desc
+	tablespaceUsage       *prometheus.Desc
+	tablespaceUsedPercent *prometheus.Desc
+	logUsage              *prometheus.Desc
+	logOperations         *prometheus.Desc
+	dbUp                  *prometheus.Desc
 }
 
 // NewCollector creates a new collector from the given config
@@ -130,6 +131,12 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 			prometheus.BuildFQName(namespace, "tablespace", "usage"),
 			"The size and usage of table space in bytes.",
 			[]string{labelDatabaseName, labelTablespaceName, labelTablespaceType},
+			nil,
+		),
+		tablespaceUsedPercent: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "tablespace", "used_percent"),
+			"The usage percent of table space.",
+			[]string{labelDatabaseName, labelTablespaceName},
 			nil,
 		),
 		logUsage: prometheus.NewDesc(
@@ -361,6 +368,7 @@ func (c *Collector) collectTablespaceStorageMetrics(metrics chan<- prometheus.Me
 		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, total, c.dbName, tablespace_name, "total")
 		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, free, c.dbName, tablespace_name, "free")
 		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, used, c.dbName, tablespace_name, "used")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, 100*(used/total), c.dbName, tablespace_name)
 	}
 
 	return rows.Err()
