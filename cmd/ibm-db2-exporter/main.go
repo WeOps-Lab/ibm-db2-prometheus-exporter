@@ -41,6 +41,8 @@ var (
 	user       = kingpin.Flag("user", "The database user.").Envar("DATABASE_USER").String()
 	password   = kingpin.Flag("password", "The database password.").Envar("DATABASE_PASSWORD").String()
 	db         = kingpin.Flag("db", "The database to connect to when querying metrics.").Envar("DATABASE_NAME").Required().String()
+	LC_ALL     = kingpin.Flag("lc_all", "Env for LC_ALL.").Envar("LC_ALL").String()
+	LANG       = kingpin.Flag("lang", "Env for LANG.").Envar("LANG").String()
 )
 
 const (
@@ -66,6 +68,13 @@ func main() {
 	kingpin.Parse()
 
 	logger := promlog.New(promlogConfig)
+
+	// 设置环境变量, 匹配数据库codepage
+	os.Setenv("LC_ALL", *LC_ALL)
+	level.Info(logger).Log("msg", fmt.Sprintf("LC_ALL: %s", *LC_ALL))
+
+	os.Setenv("LANG", *LANG)
+	level.Info(logger).Log("msg", fmt.Sprintf("LANG: %s", *LANG))
 
 	// 组合DSN字符串
 	if *dsn == "" {
