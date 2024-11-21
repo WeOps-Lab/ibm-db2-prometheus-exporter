@@ -31,6 +31,8 @@ DB2版本: 9.7+
 | **参数名**           | **含义**                          | **是否必填** | **使用举例**       |
 |-------------------|---------------------------------|----------|----------------|
 | LD_LIBRARY_PATH   | DB2客户端驱动程序的lib目录(环境变量)，建议使用绝对路径 | 是        | /clidriver/lib |
+| LC_ALL            | 优先语言环境(环境变量)                    | 是        | C              |
+| LANG              | 基本语言环境(环境变量)                    | 是        | C              |
 | DATABASE_HOSTNAME | 数据库服务IP(环境变量)                   | 是        | 127.0.0.1      |
 | DATABASE_PORT     | 数据库服务端口(环境变量)                   | 是        | 50000          |
 | DATABASE_USER     | 数据库用户名(环境变量)                    | 是        | weops          |
@@ -120,6 +122,39 @@ DB2INST1                                                                        
   4 record(s) selected.
 ```
 
+7. 检查数据库配置
+检查DB2的code page和code set, 如果出现source code page to target code page is not supported字样需要关注下方设置。  
+```sql
+SELECT CODEPAGE, COUNTRY FROM SYSCAT.DATABASES
+```
+
+在结果中确认 `Database code set` 和 `Database code page` 的值  
+如果code page等于1386, code set等于gbk, 则需要设置探针环境变量参数 `LANG=zh_CN.UTF-8` `LC_ALL=`  (LC_ALL置空)    
+如果code page等于1208, code set等于utf-8, 则需要设置探针环境变量参数 `LANG=C` `LC_ALL=C`   
+
+```
+[db2inst1@db2-0 ~]$ db2 "SELECT CODEPAGE, COUNTRY FROM SYSCAT.DATABASES"
+SQL0204N  "SYSCAT.DATABASES" is an undefined name.  SQLSTATE=42704
+[db2inst1@db2-0 ~]$ db2 "GET DATABASE CONFIGURATION FOR testdb"
+
+       Database Configuration for Database testdb
+
+ Database configuration release level                    = 0x1500
+ Database release level                                  = 0x1500
+
+ Update to database level pending                        = NO (0x0)
+ Database territory                                      = us
+ Database code page                                      = 1208     
+ Database code set                                       = utf-8
+ Database country/region code                            = 1
+ Database collating sequence                             = IDENTITY
+ Alternate collating sequence              (ALT_COLLATE) = 
+ Number compatibility                                    = OFF
+ Varchar2 compatibility                                  = OFF
+ Date compatibility                                      = OFF
+ Database page size                                      = 4096
+```
+
 ### 指标简介
 
 
@@ -129,3 +164,8 @@ DB2INST1                                                                        
 
 - weops调整
 - 新增指标 ibm_db2_tablespace_used_percent 已使用表空间百分比
+
+#### weops_DB2_exporter 1.2.3
+
+- 新增环境变量设置，兼容数据库不同code page和code set
+- 新增
