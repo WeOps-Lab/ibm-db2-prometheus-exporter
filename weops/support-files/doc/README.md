@@ -168,4 +168,3 @@ SQL0204N  "SYSCAT.DATABASES" is an undefined name.  SQLSTATE=42704
 #### weops_DB2_exporter 1.2.3
 
 - 新增环境变量设置，兼容数据库不同code page和code set
-- 新增
