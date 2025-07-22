@@ -39,6 +39,7 @@ const (
 	labelRowState         = "row_state"
 	labelTablespaceName   = "tablespace_name"
 	labelTablespaceType   = "tablespace_type"
+	labelMember           = "member"
 )
 
 type Collector struct {
@@ -118,7 +119,7 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 		bufferpoolHitRatio: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "bufferpool", "hit_ratio"),
 			"The percentage of time that the database manager did not need to load a page from disk to service a page request.",
-			[]string{labelDatabaseName, labelBufferpoolName},
+			[]string{labelDatabaseName, labelMember, labelBufferpoolName},
 			nil,
 		),
 		rowCount: prometheus.NewDesc(
@@ -130,13 +131,13 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 		tablespaceUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "usage"),
 			"The size and usage of table space in bytes.",
-			[]string{labelDatabaseName, labelTablespaceName, labelTablespaceType},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, labelTablespaceType},
 			nil,
 		),
 		tablespaceUsedPercent: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "used_percent"),
 			"The usage percent of table space.",
-			[]string{labelDatabaseName, labelTablespaceName},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName},
 			nil,
 		),
 		logUsage: prometheus.NewDesc(
@@ -359,16 +360,16 @@ func (c *Collector) collectTablespaceStorageMetrics(metrics chan<- prometheus.Me
 	defer rows.Close()
 
 	for rows.Next() {
-		var tablespace_name string
+		var tablespace_name, member string
 		var total, free, used float64
-		if err := rows.Scan(&tablespace_name, &total, &free, &used); err != nil {
+		if err := rows.Scan(&tablespace_name, &member, &total, &free, &used); err != nil {
 			return fmt.Errorf("failed to query metrics: %w", err)
 		}
 
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, total, c.dbName, tablespace_name, "total")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, free, c.dbName, tablespace_name, "free")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, used, c.dbName, tablespace_name, "used")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, 100*(used/total), c.dbName, tablespace_name)
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, total, c.dbName, member, tablespace_name, "total")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, free, c.dbName, member, tablespace_name, "free")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, used, c.dbName, member, tablespace_name, "used")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, 100*(used/total), c.dbName, member, tablespace_name)
 	}
 
 	return rows.Err()
@@ -406,9 +407,9 @@ func (c *Collector) collectBufferpoolMetrics(metrics chan<- prometheus.Metric) e
 	defer rows.Close()
 
 	for rows.Next() {
-		var bp_name string
+		var bp_name, member string
 		var ratio, foo float64
-		if err := rows.Scan(&bp_name, &foo, &foo, &foo, &ratio); err != nil {
+		if err := rows.Scan(&bp_name, &foo, &foo, &member, &ratio); err != nil {
 			return fmt.Errorf("failed to query metrics: %w", err)
 		}
 
@@ -417,7 +418,7 @@ func (c *Collector) collectBufferpoolMetrics(metrics chan<- prometheus.Metric) e
 			continue
 		}
 
-		metrics <- prometheus.MustNewConstMetric(c.bufferpoolHitRatio, prometheus.GaugeValue, ratio, c.dbName, bp_name)
+		metrics <- prometheus.MustNewConstMetric(c.bufferpoolHitRatio, prometheus.GaugeValue, ratio, c.dbName, member, bp_name)
 	}
 
 	return rows.Err()
