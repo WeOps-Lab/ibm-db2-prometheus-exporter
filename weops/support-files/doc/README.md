@@ -156,15 +156,38 @@ SQL0204N  "SYSCAT.DATABASES" is an undefined name.  SQLSTATE=42704
 ```
 
 ### 指标简介
+| **指标ID**                        | **指标中文名** | **维度ID**                                                | **维度含义**                | **单位**  |
+|---------------------------------|-----------|---------------------------------------------------------|-------------------------|---------|
+| ibm_db2_up                      | 监控插件运行状态  | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_application_active      | 活动应用数量    | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_application_executing   | 正在执行应用数量  | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_bufferpool_hit_ratio    | 缓冲池命中率    | bufferpool_name, member, database_name                  | 缓冲池名称, 成员, 数据库名称        | percent |
+| ibm_db2_connections_top_total   | 最大并发连接数   | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_deadlock_total          | 死锁总数      | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_lock_timeout_total      | 锁超时总数     | database_name                                           | 数据库名称                   | -       |
+| ibm_db2_lock_usage              | 锁使用情况     | database_name, lock_state                               | 数据库名称, 锁状态              | -       |
+| ibm_db2_lock_wait_time          | 锁等待时间     | database_name                                           | 数据库名称                   | ms      |
+| ibm_db2_log_operations_total    | 日志操作总数    | database_name, log_member, log_operation_type           | 数据库名称, 日志成员, 日志操作类型     | -       |
+| ibm_db2_log_usage               | 日志使用情况    | database_name, log_member, log_usage_type               | 数据库名称, 日志成员, 日志使用类型     | -       |
+| ibm_db2_row_total               | 行操作总数     | database_name, row_state                                | 数据库名称, 行状态              | -       |
+| ibm_db2_tablespace_usage        | 表空间使用情况   | database_name, member, tablespace_name, tablespace_type | 数据库名称, 成员, 表空间名称, 表空间类型 | bytes   |
+| ibm_db2_tablespace_used_percent | 已使用表空间百分比 | database_name, member, tablespace_name                  | 数据库名称, 成员, 表空间名称        | percent |
 
 
 ### 版本日志
 
-#### weops_DB2_exporter 1.2.2
+#### weops_DB2_exporter v1.2.2
 
 - weops调整
 - 新增指标 ibm_db2_tablespace_used_percent 已使用表空间百分比
 
-#### weops_DB2_exporter 1.2.3
+#### weops_DB2_exporter v1.2.3
 
 - 新增环境变量设置，兼容数据库不同code page和code set
+
+#### weops_DB2_exporter v1.2.4
+- 修复成员维度缺失导致的重复维度报错问题  
+  影响指标：  
+  - ibm_db2_tablespace_usage  
+  - ibm_db2_tablespace_used_percent  
+  - ibm_db2_bufferpool_hit_ratio
