@@ -129,7 +129,7 @@ SELECT CODEPAGE, COUNTRY FROM SYSCAT.DATABASES
 ```
 
 在结果中确认 `Database code set` 和 `Database code page` 的值  
-如果code page等于1386, code set等于gbk, 则需要设置探针环境变量参数 `LANG=zh_CN.UTF-8` `LC_ALL=`  (LC_ALL置空)    
+如果code page等于1386, code set等于gbk, 则需要设置探针环境变量参数 `LANG=zh_CN.UTF-8` `LC_ALL=zh_CN.UTF-8` 
 如果code page等于1208, code set等于utf-8, 则需要设置探针环境变量参数 `LANG=C` `LC_ALL=C`   
 
 ```
