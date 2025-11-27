@@ -84,4 +84,19 @@ const (
 		END AS HIT_RATIO
 	FROM BPMETRICS;
 	`
+
+	uowLogSpaceMetricsQuery = `SELECT 
+	SUM(UOW_LOG_SPACE_USED) as total_log_space_used,
+	AVG(UOW_LOG_SPACE_USED) as avg_log_space_used,
+	MAX(UOW_LOG_SPACE_USED) as max_log_space_used,
+	COUNT(*) as active_uow_count
+	FROM TABLE(MON_GET_UNIT_OF_WORK(NULL, -2))
+	`
+
+	logUtilizationMetricsQuery = `SELECT 
+	db_name,
+	log_utilization_percent,
+	dbpartitionnum as member
+	FROM SYSIBMADM.LOG_UTILIZATION
+	`
 )

@@ -64,6 +64,9 @@ type Collector struct {
 	tablespaceUsedPercent *prometheus.Desc
 	logUsage              *prometheus.Desc
 	logOperations         *prometheus.Desc
+	uowLogSpace           *prometheus.Desc
+	uowActiveCount        *prometheus.Desc
+	logUtilizationPercent *prometheus.Desc
 	dbUp                  *prometheus.Desc
 }
 
@@ -152,6 +155,24 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 			[]string{labelDatabaseName, labelLogMember, labelLogOperationType},
 			nil,
 		),
+		uowLogSpace: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "uow", "log_space_bytes"),
+			"Unit of work log space usage statistics in bytes.",
+			[]string{labelDatabaseName, "stat_type"},
+			nil,
+		),
+		uowActiveCount: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "uow", "active_count"),
+			"The number of currently active units of work.",
+			[]string{labelDatabaseName},
+			nil,
+		),
+		logUtilizationPercent: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "log", "utilization_percent"),
+			"The percentage of active log space currently utilized by the database.",
+			[]string{labelDatabaseName, labelLogMember},
+			nil,
+		),
 		dbUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Metric indicating the status of the exporter collection. 1 indicates that the connection to IBM DB2 was successful, and all available metrics were collected. A 0 indicates that the exporter failed to collect metrics or to connect to IBM DB2.",
@@ -174,8 +195,12 @@ func (c *Collector) Describe(descs chan<- *prometheus.Desc) {
 	descs <- c.lockWaitTime
 	descs <- c.logOperations
 	descs <- c.logUsage
+	descs <- c.logUtilizationPercent
 	descs <- c.rowCount
 	descs <- c.tablespaceUsage
+	descs <- c.tablespaceUsedPercent
+	descs <- c.uowLogSpace
+	descs <- c.uowActiveCount
 	descs <- c.dbUp
 }
 
@@ -224,6 +249,16 @@ func (c *Collector) Collect(metrics chan<- prometheus.Metric) {
 
 	if err := c.collectBufferpoolMetrics(metrics); err != nil {
 		level.Error(c.logger).Log("msg", "Failed to collect bufferpool metrics.", "err", err)
+		up = 0
+	}
+
+	if err := c.collectUowLogSpaceMetrics(metrics); err != nil {
+		level.Error(c.logger).Log("msg", "Failed to collect UOW log space metrics.", "err", err)
+		up = 0
+	}
+
+	if err := c.collectLogUtilizationMetrics(metrics); err != nil {
+		level.Error(c.logger).Log("msg", "Failed to collect log utilization metrics.", "err", err)
 		up = 0
 	}
 
@@ -419,6 +454,54 @@ func (c *Collector) collectBufferpoolMetrics(metrics chan<- prometheus.Metric) e
 		}
 
 		metrics <- prometheus.MustNewConstMetric(c.bufferpoolHitRatio, prometheus.GaugeValue, ratio, c.dbName, member, bp_name)
+	}
+
+	return rows.Err()
+}
+
+func (c *Collector) collectUowLogSpaceMetrics(metrics chan<- prometheus.Metric) error {
+	rows, err := c.db.Query(uowLogSpaceMetricsQuery)
+	if err != nil {
+		return fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var totalLogSpace, avgLogSpace, maxLogSpace, activeUowCount float64
+		if err := rows.Scan(&totalLogSpace, &avgLogSpace, &maxLogSpace, &activeUowCount); err != nil {
+			return fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// Emit UOW log space metrics with different stat types
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, totalLogSpace, c.dbName, "total")
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, avgLogSpace, c.dbName, "avg")
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, maxLogSpace, c.dbName, "max")
+
+		// Emit active UOW count as a separate metric
+		metrics <- prometheus.MustNewConstMetric(c.uowActiveCount, prometheus.GaugeValue, activeUowCount, c.dbName)
+	}
+
+	return rows.Err()
+}
+
+func (c *Collector) collectLogUtilizationMetrics(metrics chan<- prometheus.Metric) error {
+	rows, err := c.db.Query(logUtilizationMetricsQuery)
+	if err != nil {
+		return fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var dbName string
+		var iMember int
+		var utilizationPercent float64
+		if err := rows.Scan(&dbName, &utilizationPercent, &iMember); err != nil {
+			return fmt.Errorf("failed to scan row: %w", err)
+		}
+		member := strconv.Itoa(iMember)
+
+		// Emit log utilization percentage metric
+		metrics <- prometheus.MustNewConstMetric(c.logUtilizationPercent, prometheus.GaugeValue, utilizationPercent, c.dbName, member)
 	}
 
 	return rows.Err()
