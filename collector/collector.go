@@ -64,7 +64,9 @@ type Collector struct {
 	tablespaceUsedPercent *prometheus.Desc
 	logUsage              *prometheus.Desc
 	logOperations         *prometheus.Desc
-	uowLogSpace           *prometheus.Desc
+	uowLogSpaceTotal      *prometheus.Desc
+	uowLogSpaceAvg        *prometheus.Desc
+	uowLogSpaceMax        *prometheus.Desc
 	uowActiveCount        *prometheus.Desc
 	logUtilizationPercent *prometheus.Desc
 	dbUp                  *prometheus.Desc
@@ -155,10 +157,22 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 			[]string{labelDatabaseName, labelLogMember, labelLogOperationType},
 			nil,
 		),
-		uowLogSpace: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "uow", "log_space_bytes"),
-			"Unit of work log space usage statistics in bytes.",
-			[]string{labelDatabaseName, "stat_type"},
+		uowLogSpaceTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "uow", "log_space_total_bytes"),
+			"Total unit of work log space usage in bytes across all active units of work.",
+			[]string{labelDatabaseName},
+			nil,
+		),
+		uowLogSpaceAvg: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "uow", "log_space_avg_bytes"),
+			"Average unit of work log space usage in bytes per active unit of work.",
+			[]string{labelDatabaseName},
+			nil,
+		),
+		uowLogSpaceMax: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "uow", "log_space_max_bytes"),
+			"Maximum unit of work log space usage in bytes among all active units of work.",
+			[]string{labelDatabaseName},
 			nil,
 		),
 		uowActiveCount: prometheus.NewDesc(
@@ -199,7 +213,9 @@ func (c *Collector) Describe(descs chan<- *prometheus.Desc) {
 	descs <- c.rowCount
 	descs <- c.tablespaceUsage
 	descs <- c.tablespaceUsedPercent
-	descs <- c.uowLogSpace
+	descs <- c.uowLogSpaceTotal
+	descs <- c.uowLogSpaceAvg
+	descs <- c.uowLogSpaceMax
 	descs <- c.uowActiveCount
 	descs <- c.dbUp
 }
@@ -472,10 +488,10 @@ func (c *Collector) collectUowLogSpaceMetrics(metrics chan<- prometheus.Metric) 
 			return fmt.Errorf("failed to scan row: %w", err)
 		}
 
-		// Emit UOW log space metrics with different stat types
-		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, totalLogSpace, c.dbName, "total")
-		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, avgLogSpace, c.dbName, "avg")
-		metrics <- prometheus.MustNewConstMetric(c.uowLogSpace, prometheus.GaugeValue, maxLogSpace, c.dbName, "max")
+		// Emit three separate UOW log space metrics
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpaceTotal, prometheus.GaugeValue, totalLogSpace, c.dbName)
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpaceAvg, prometheus.GaugeValue, avgLogSpace, c.dbName)
+		metrics <- prometheus.MustNewConstMetric(c.uowLogSpaceMax, prometheus.GaugeValue, maxLogSpace, c.dbName)
 
 		// Emit active UOW count as a separate metric
 		metrics <- prometheus.MustNewConstMetric(c.uowActiveCount, prometheus.GaugeValue, activeUowCount, c.dbName)
