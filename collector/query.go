@@ -44,9 +44,13 @@ const (
 	`
 
 	tablespaceStorageMetricsQuery = `SELECT 
-	tbsp_name, member,
-	(tbsp_total_pages*tbsp_page_size) as total_b, 
-	(tbsp_free_pages*tbsp_page_size) as free_b, 
+	tbsp_name, 
+	member,
+	tbsp_page_size,
+	tbsp_auto_resize_enabled as auto_resize,
+	tbsp_max_size as max_size,
+	(tbsp_total_pages*tbsp_page_size) as total_b,
+	(tbsp_free_pages*tbsp_page_size) as free_b,
 	(tbsp_used_pages*tbsp_page_size) as used_b
 	FROM TABLE(MON_GET_TABLESPACE('', -2))
 	`

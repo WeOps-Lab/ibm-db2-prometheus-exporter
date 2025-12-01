@@ -61,6 +61,7 @@ type Collector struct {
 	bufferpoolHitRatio    *prometheus.Desc
 	rowCount              *prometheus.Desc
 	tablespaceUsage       *prometheus.Desc
+	tablespaceMaxBytes    *prometheus.Desc
 	tablespaceUsedPercent *prometheus.Desc
 	logUsage              *prometheus.Desc
 	logOperations         *prometheus.Desc
@@ -139,10 +140,16 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 			[]string{labelDatabaseName, labelMember, labelTablespaceName, labelTablespaceType},
 			nil,
 		),
+		tablespaceMaxBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "tablespace", "max_bytes"),
+			"The maximum size of table space in bytes. -1 indicates unlimited (auto-resize with no cap).",
+			[]string{labelDatabaseName, labelMember, labelTablespaceName},
+			nil,
+		),
 		tablespaceUsedPercent: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "used_percent"),
-			"The usage percent of table space.",
-			[]string{labelDatabaseName, labelMember, labelTablespaceName},
+			"The usage percent of table space. For unlimited tablespaces (max_size=-1), calculated against current total. For limited tablespaces, calculated against max_size.",
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, "auto_resize", "is_unlimited"},
 			nil,
 		),
 		logUsage: prometheus.NewDesc(
@@ -212,6 +219,7 @@ func (c *Collector) Describe(descs chan<- *prometheus.Desc) {
 	descs <- c.logUtilizationPercent
 	descs <- c.rowCount
 	descs <- c.tablespaceUsage
+	descs <- c.tablespaceMaxBytes
 	descs <- c.tablespaceUsedPercent
 	descs <- c.uowLogSpaceTotal
 	descs <- c.uowLogSpaceAvg
@@ -411,16 +419,64 @@ func (c *Collector) collectTablespaceStorageMetrics(metrics chan<- prometheus.Me
 	defer rows.Close()
 
 	for rows.Next() {
-		var tablespace_name, member string
-		var total, free, used float64
-		if err := rows.Scan(&tablespace_name, &member, &total, &free, &used); err != nil {
-			return fmt.Errorf("failed to query metrics: %w", err)
+		var tablespaceName, member string
+		var autoResize int64
+		var maxSize sql.NullInt64 // 使用 NullInt64 处理 NULL 值
+		var pageSize, totalPages, usedPages int64
+		var freeBytes float64
+
+		if err := rows.Scan(&tablespaceName, &member, &pageSize, &autoResize, &maxSize, &totalPages, &freeBytes, &usedPages); err != nil {
+			return fmt.Errorf("failed to scan row: %w", err)
 		}
 
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, total, c.dbName, member, tablespace_name, "total")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, free, c.dbName, member, tablespace_name, "free")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, used, c.dbName, member, tablespace_name, "used")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, 100*(used/total), c.dbName, member, tablespace_name)
+		// 计算字节数
+		totalBytes := float64(totalPages * pageSize)
+		usedBytes := float64(usedPages * pageSize)
+
+		// 计算 max_bytes 和 is_unlimited
+		var maxBytes float64
+		var isUnlimited int64
+		var utilizationPercent float64
+
+		if !maxSize.Valid || maxSize.Int64 == -1 {
+			// 无限制（max_size = -1 或 NULL）
+			maxBytes = -1
+			isUnlimited = 1
+			// 基于当前已分配空间计算使用率
+			if totalPages > 0 {
+				utilizationPercent = (float64(usedPages) / float64(totalPages)) * 100
+			} else {
+				utilizationPercent = 0
+			}
+		} else if maxSize.Int64 == 0 {
+			// 特殊情况：max_size = 0
+			maxBytes = 0
+			isUnlimited = 0
+			utilizationPercent = 0
+		} else {
+			// 有限制（max_size > 0）
+			maxBytes = float64(maxSize.Int64 * pageSize)
+			isUnlimited = 0
+			// 基于最大容量计算准确使用率
+			if maxSize.Int64 > 0 {
+				utilizationPercent = (float64(usedPages) / float64(maxSize.Int64)) * 100
+			} else {
+				utilizationPercent = 0
+			}
+		}
+
+		// 转换为字符串标签
+		autoResizeStr := strconv.FormatInt(autoResize, 10)
+		isUnlimitedStr := strconv.FormatInt(isUnlimited, 10)
+
+		// 发送基础使用指标
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, totalBytes, c.dbName, member, tablespaceName, "total")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, freeBytes, c.dbName, member, tablespaceName, "free")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, usedBytes, c.dbName, member, tablespaceName, "used")
+
+		// 发送最大容量和使用率（在 Go 中计算）
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceMaxBytes, prometheus.GaugeValue, maxBytes, c.dbName, member, tablespaceName)
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, utilizationPercent, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr)
 	}
 
 	return rows.Err()
