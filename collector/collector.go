@@ -40,6 +40,8 @@ const (
 	labelTablespaceName   = "tablespace_name"
 	labelTablespaceType   = "tablespace_type"
 	labelMember           = "member"
+	tableSpaceState       = "tbsp_state"
+	tableSpaceType        = "tbsp_type"
 )
 
 type Collector struct {
@@ -137,19 +139,19 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 		tablespaceUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "usage"),
 			"The size and usage of table space in bytes.",
-			[]string{labelDatabaseName, labelMember, labelTablespaceName, labelTablespaceType},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, labelTablespaceType, tableSpaceType, tableSpaceState},
 			nil,
 		),
 		tablespaceMaxBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "max_bytes"),
 			"The maximum size of table space in bytes. -1 indicates unlimited (auto-resize with no cap).",
-			[]string{labelDatabaseName, labelMember, labelTablespaceName},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, tableSpaceType, tableSpaceState},
 			nil,
 		),
 		tablespaceUsedPercent: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "used_percent"),
 			"The usage percent of table space. For unlimited tablespaces (max_size=-1), calculated against current total. For limited tablespaces, calculated against max_size.",
-			[]string{labelDatabaseName, labelMember, labelTablespaceName, "auto_resize", "is_unlimited"},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, "auto_resize", "is_unlimited", tableSpaceType, tableSpaceState},
 			nil,
 		),
 		logUsage: prometheus.NewDesc(
@@ -419,13 +421,13 @@ func (c *Collector) collectTablespaceStorageMetrics(metrics chan<- prometheus.Me
 	defer rows.Close()
 
 	for rows.Next() {
-		var tablespaceName, member string
+		var tablespaceName, member, tbspType, tbspState string
 		var autoResize int64
 		var maxSize sql.NullInt64 // 使用 NullInt64 处理 NULL 值
 		var pageSize, totalPages, usedPages int64
 		var freeBytes float64
 
-		if err := rows.Scan(&tablespaceName, &member, &pageSize, &autoResize, &maxSize, &totalPages, &freeBytes, &usedPages); err != nil {
+		if err := rows.Scan(&tablespaceName, &member, &pageSize, &autoResize, &maxSize, &tbspType, &tbspState, &totalPages, &freeBytes, &usedPages); err != nil {
 			return fmt.Errorf("failed to scan row: %w", err)
 		}
 
@@ -470,13 +472,13 @@ func (c *Collector) collectTablespaceStorageMetrics(metrics chan<- prometheus.Me
 		isUnlimitedStr := strconv.FormatInt(isUnlimited, 10)
 
 		// 发送基础使用指标
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, totalBytes, c.dbName, member, tablespaceName, "total")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, freeBytes, c.dbName, member, tablespaceName, "free")
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, usedBytes, c.dbName, member, tablespaceName, "used")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, totalBytes, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr, tbspType, tbspState, "total")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, freeBytes, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr, tbspType, tbspState, "free")
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsage, prometheus.GaugeValue, usedBytes, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr, tbspType, tbspState, "used")
 
 		// 发送最大容量和使用率（在 Go 中计算）
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceMaxBytes, prometheus.GaugeValue, maxBytes, c.dbName, member, tablespaceName)
-		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, utilizationPercent, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr)
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceMaxBytes, prometheus.GaugeValue, maxBytes, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr, tbspType, tbspState)
+		metrics <- prometheus.MustNewConstMetric(c.tablespaceUsedPercent, prometheus.GaugeValue, utilizationPercent, c.dbName, member, tablespaceName, autoResizeStr, isUnlimitedStr, tbspType, tbspState)
 	}
 
 	return rows.Err()

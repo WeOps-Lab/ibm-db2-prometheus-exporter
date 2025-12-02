@@ -49,6 +49,8 @@ const (
 	tbsp_page_size,
 	tbsp_auto_resize_enabled as auto_resize,
 	tbsp_max_size as max_size,
+	tbsp_type,
+	tbsp_state,
 	(tbsp_total_pages*tbsp_page_size) as total_b,
 	(tbsp_free_pages*tbsp_page_size) as free_b,
 	(tbsp_used_pages*tbsp_page_size) as used_b
