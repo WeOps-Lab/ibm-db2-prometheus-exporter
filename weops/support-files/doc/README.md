@@ -156,28 +156,28 @@ SQL0204N  "SYSCAT.DATABASES" is an undefined name.  SQLSTATE=42704
 ```
 
 ### 指标简介
-| **指标ID**                          | **指标中文名**           | **维度ID**                                                          | **维度含义**                             | **单位**  | **指标类型** |
-|-----------------------------------|---------------------|-------------------------------------------------------------------|--------------------------------------|---------|----------|
-| ibm_db2_up                        | 监控插件运行状态            | database_name                                                     | 数据库名称                                | -       | gauge    |
-| ibm_db2_application_active        | 活动应用数量              | database_name                                                     | 数据库名称                                | -       | gauge    |
-| ibm_db2_application_executing     | 正在执行应用数量            | database_name                                                     | 数据库名称                                | -       | gauge    |
-| ibm_db2_bufferpool_hit_ratio      | 缓冲池命中率              | bufferpool_name, member, database_name                            | 缓冲池名称, 成员, 数据库名称                     | percent | gauge    |
-| ibm_db2_connections_top_total     | 最大并发连接数             | database_name                                                     | 数据库名称                                | -       | counter  |
-| ibm_db2_deadlock_total            | 死锁总数                | database_name                                                     | 数据库名称                                | -       | counter  |
-| ibm_db2_lock_timeout_total        | 锁超时总数               | database_name                                                     | 数据库名称                                | -       | counter  |
-| ibm_db2_lock_usage                | 锁使用情况               | database_name, lock_state                                         | 数据库名称, 锁状态                           | -       | gauge    |
-| ibm_db2_lock_wait_time            | 锁等待时间               | database_name                                                     | 数据库名称                                | ms      | gauge    |
-| ibm_db2_log_operations_total      | 日志操作总数              | database_name, log_member, log_operation_type                     | 数据库名称, 日志成员, 日志操作类型                  | -       | counter  |
-| ibm_db2_log_usage                 | 日志使用情况              | database_name, log_member, log_usage_type                         | 数据库名称, 日志成员, 日志使用类型                  | -       | gauge    |
-| ibm_db2_uow_active_count          | 当前活跃 UOW 单元数量       | database_name                                                     | 数据库名称                                | -       | gauge    |
-| ibm_db2_uow_log_space_avg_bytes   | 每个活跃 UOW 的平均日志空间使用量 | database_name                                                     | 数据库名称                                | bytes   | gauge    |
-| ibm_db2_uow_log_space_max_bytes   | 所有活跃 UOW 的最大日志使用量   | database_name                                                     | 数据库名称                                | bytes   | gauge    |
-| ibm_db2_uow_log_space_total_bytes | 全部活跃 UOW 的总日志空间使用量  | database_name                                                     | 数据库名称                                | bytes   | gauge    |
-| ibm_db2_log_utilization_percent   | 活动日志空间使用率           | database_name, log_member                                         | 数据库名称, 日志成员                          | percent | gauge    |
-| ibm_db2_row_total                 | 行操作总数               | database_name, row_state                                          | 数据库名称, 行状态                           | -       | counter  |
-| ibm_db2_tablespace_usage          | 表空间使用情况             | database_name, member, tablespace_name, tablespace_type           | 数据库名称, 成员, 表空间名称, 表空间类型              | bytes   | gauge    |
-| ibm_db2_tablespace_used_percent   | 已使用表空间百分比           | database_name, member, tablespace_name, is_unlimited, auto_resize | 数据库名称, 成员, 表空间名称, 最大容量限制状态, 自动扩展容量状态 | percent | gauge    |
-| ibm_db2_tablespace_max_bytes      | 表空间最大容量             | database_name, member, tablespace_name                            | 数据库名称, 日志成员                          | bytes   | gauge    |
+| **指标ID**                          | **指标中文名**           | **维度ID**                                                                                              | **维度含义**                                                 | **单位**  | **指标类型** |
+|-----------------------------------|---------------------|-------------------------------------------------------------------------------------------------------|----------------------------------------------------------|---------|----------|
+| ibm_db2_up                        | 监控插件运行状态            | database_name                                                                                         | 数据库名称                                                    | -       | gauge    |
+| ibm_db2_application_active        | 活动应用数量              | database_name                                                                                         | 数据库名称                                                    | -       | gauge    |
+| ibm_db2_application_executing     | 正在执行应用数量            | database_name                                                                                         | 数据库名称                                                    | -       | gauge    |
+| ibm_db2_bufferpool_hit_ratio      | 缓冲池命中率              | bufferpool_name, member, database_name                                                                | 缓冲池名称, 成员, 数据库名称                                         | percent | gauge    |
+| ibm_db2_connections_top_total     | 最大并发连接数             | database_name                                                                                         | 数据库名称                                                    | -       | counter  |
+| ibm_db2_deadlock_total            | 死锁总数                | database_name                                                                                         | 数据库名称                                                    | -       | counter  |
+| ibm_db2_lock_timeout_total        | 锁超时总数               | database_name                                                                                         | 数据库名称                                                    | -       | counter  |
+| ibm_db2_lock_usage                | 锁使用情况               | database_name, lock_state                                                                             | 数据库名称, 锁状态                                               | -       | gauge    |
+| ibm_db2_lock_wait_time            | 锁等待时间               | database_name                                                                                         | 数据库名称                                                    | ms      | gauge    |
+| ibm_db2_log_operations_total      | 日志操作总数              | database_name, log_member, log_operation_type                                                         | 数据库名称, 日志成员, 日志操作类型                                      | -       | counter  |
+| ibm_db2_log_usage                 | 日志使用情况              | database_name, log_member, log_usage_type                                                             | 数据库名称, 日志成员, 日志使用类型                                      | -       | gauge    |
+| ibm_db2_uow_active_count          | 当前活跃 UOW 单元数量       | database_name                                                                                         | 数据库名称                                                    | -       | gauge    |
+| ibm_db2_uow_log_space_avg_bytes   | 每个活跃 UOW 的平均日志空间使用量 | database_name                                                                                         | 数据库名称                                                    | bytes   | gauge    |
+| ibm_db2_uow_log_space_max_bytes   | 所有活跃 UOW 的最大日志使用量   | database_name                                                                                         | 数据库名称                                                    | bytes   | gauge    |
+| ibm_db2_uow_log_space_total_bytes | 全部活跃 UOW 的总日志空间使用量  | database_name                                                                                         | 数据库名称                                                    | bytes   | gauge    |
+| ibm_db2_log_utilization_percent   | 活动日志空间使用率           | database_name, log_member                                                                             | 数据库名称, 日志成员                                              | percent | gauge    |
+| ibm_db2_row_total                 | 行操作总数               | database_name, row_state                                                                              | 数据库名称, 行状态                                               | -       | counter  |
+| ibm_db2_tablespace_usage          | 表空间使用情况             | database_name, member, tablespace_name, is_unlimited, auto_resize, tbsp_type_, tbsp_state, usage_type | 数据库名称, 成员, 表空间名称, 最大容量限制状态, 自动扩展容量状态, 表空间类型, 表空间状态, 使用类型 | bytes   | gauge    |
+| ibm_db2_tablespace_used_percent   | 已使用表空间百分比           | database_name, member, tablespace_name, is_unlimited, auto_resize, tbsp_type_, tbsp_state             | 数据库名称, 成员, 表空间名称, 最大容量限制状态, 自动扩展容量状态, 表空间类型, 表空间状态       | percent | gauge    |
+| ibm_db2_tablespace_max_bytes      | 表空间最大容量             | database_name, member, tablespace_name, is_unlimited, auto_resize, tbsp_type_, tbsp_state             | 数据库名称, 成员, 表空间名称, 最大容量限制状态, 自动扩展容量状态, 表空间类型, 表空间状态       | bytes   | gauge    |
 
 
 ### 版本日志
@@ -212,3 +212,4 @@ tablespace类指标新增维度
 - 新增维度 auto_resize 自动扩展容量状态
 - 新增维度 tbsp_state 表空间状态
 - 新增维度 tbsp_type 表空间类型
+- 维度tablespace_type 调整为 usage_type 使用类型
