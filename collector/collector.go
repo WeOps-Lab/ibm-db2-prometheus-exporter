@@ -41,6 +41,7 @@ const (
 	labelTablespaceType   = "tablespace_type"
 	labelMember           = "member"
 	tableSpaceState       = "tbsp_state"
+	tableSpaceType        = "tbsp_type"
 	tableSpaceAutoResize  = "auto_resize"
 	tableSpaceIsUnlimited = "is_unlimited"
 )
@@ -140,7 +141,7 @@ func NewCollector(logger log.Logger, cfg *Config) *Collector {
 		tablespaceUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "tablespace", "usage"),
 			"The size and usage of table space in bytes.",
-			[]string{labelDatabaseName, labelMember, labelTablespaceName, tableSpaceAutoResize, tableSpaceIsUnlimited, labelTablespaceType, tableSpaceState},
+			[]string{labelDatabaseName, labelMember, labelTablespaceName, tableSpaceAutoResize, tableSpaceIsUnlimited, labelTablespaceType, tableSpaceState, labelTablespaceType},
 			nil,
 		),
 		tablespaceMaxBytes: prometheus.NewDesc(
